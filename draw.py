@@ -1,9 +1,54 @@
 from display import *
 from matrix import *
 from gmath import *
+from random import *
 
 def scanline_convert(polygons, i, screen, zbuffer ):
-    pass
+    color = [randint(0, 255), randint(0, 255), randint(0, 255)]
+    points = [polygons[i], polygons[i + 1], polygons[i + 2]]
+
+    if points[0][1] > points[1][1]:
+        temp = points[0]
+        points[0] = points[1]
+        points[1] = temp
+
+    if points[1][1] > points[2][1]:
+        temp = points[1]
+        points[1] = points[2]
+        points[2] = temp
+
+    if points[0][1] > points[1][1]:
+        temp = points[0]
+        points[0] = points[1]
+        points[1] = temp
+
+    xb, yb, zb = float(points[0][0]), float(points[0][1]), float(points[0][2])
+    xm, ym, zm = float(points[1][0]), float(points[1][1]), float(points[1][2])
+    xt, yt, zt = float(points[2][0]), float(points[2][1]), float(points[2][2])
+    x1 = xb
+    x = xb
+    zbt = zb
+    z = zb
+
+    y = int(yb)
+    while y < int(ym):
+        y += 1
+        draw_line(int(x1), int(y), int(zbt), int(x), int(y), int(z), screen, zbuffer, color)
+        x1 += (xt - xb) / (yt - yb)
+        x += (xm - xb) / (ym - yb)
+        zbt += (zt - zb) / (yt - yb)
+        z += (zm - zb) / (ym - yb)
+    x = xm
+    z = zm
+
+    y = int(ym)
+    while y < int(yt):
+        draw_line(int(x1), int(y), int(zbt), int(x), int(y), int(z), screen, zbuffer, color)
+        x1 += ((xt - xb) / (yt - yb))
+        x += ((xt - xm) / (yt - ym))
+        zbt += ((zt - zb) / (yt - yb))
+        z += ((zt - zm) / (yt - ym))
+        y += 1
 
 def add_polygon( polygons, x0, y0, z0, x1, y1, z1, x2, y2, z2 ):
     add_point(polygons, x0, y0, z0)
@@ -21,27 +66,7 @@ def draw_polygons( polygons, screen, zbuffer, color ):
         normal = calculate_normal(polygons, point)[:]
         #print normal
         if normal[2] > 0:
-            draw_line( int(polygons[point][0]),
-                       int(polygons[point][1]),
-                       polygons[point][2],
-                       int(polygons[point+1][0]),
-                       int(polygons[point+1][1]),
-                       polygons[point+1][2],
-                       screen, zbuffer, color)
-            draw_line( int(polygons[point+2][0]),
-                       int(polygons[point+2][1]),
-                       polygons[point+2][2],
-                       int(polygons[point+1][0]),
-                       int(polygons[point+1][1]),
-                       polygons[point+1][2],
-                       screen, zbuffer, color)
-            draw_line( int(polygons[point][0]),
-                       int(polygons[point][1]),
-                       polygons[point][2],
-                       int(polygons[point+2][0]),
-                       int(polygons[point+2][1]),
-                       polygons[point+2][2],
-                       screen, zbuffer, color)
+            scanline_convert(polygons, point, screen, zbuffer)
         point+= 3
 
 
@@ -258,13 +283,16 @@ def draw_line( x0, y0, z0, x1, y1, z1, screen, zbuffer, color ):
     if x0 > x1:
         xt = x0
         yt = y0
+        zt = z0
         x0 = x1
         y0 = y1
+        z0 = z1
         x1 = xt
         y1 = yt
-
+        z1 = zt
     x = x0
     y = y0
+    z = z0
     A = 2 * (y1 - y0)
     B = -2 * (x1 - x0)
     wide = False
@@ -304,7 +332,8 @@ def draw_line( x0, y0, z0, x1, y1, z1, screen, zbuffer, color ):
             d_east = -1 * B
             loop_start = y1
             loop_end = y
-
+    
+    temp = loop_start
     while ( loop_start < loop_end ):
         plot( screen, zbuffer, color, x, y, 0 )
         if ( (wide and ((A > 0 and d > 0) or (A < 0 and d < 0))) or
@@ -318,4 +347,6 @@ def draw_line( x0, y0, z0, x1, y1, z1, screen, zbuffer, color ):
             y+= dy_east
             d+= d_east
         loop_start+= 1
+        if temp != loop_end:
+            z+= ((z1 - z0) / (loop_end - temp))
     plot( screen, zbuffer, color, x, y, 0 )
